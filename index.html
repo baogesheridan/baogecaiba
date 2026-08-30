@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>宝哥的个人空间</title>
+    <style>
+        :root {
+            --bg-color: #f5f7fa;
+            --card-bg: #ffffff;
+            --text-main: #1d1d1f;
+            --text-muted: #515154;
+            --primary-color: #0071e3;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            max-width: 680px; 
+            margin: 0 auto; 
+            padding: 0 20px; 
+            background-color: var(--bg-color); 
+            color: var(--text-main);
+            line-height: 1.7;
+        }
+        /* 1. 极简导航栏（隐藏私人管理入口） */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px 0;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #e5e5e7;
+        }
+        nav .logo {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+        nav .links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            margin-left: 20px;
+            transition: color 0.2s;
+        }
+        nav .links a:hover {
+            color: var(--primary-color);
+        }
+        /* 2. 主标题 */
+        h1.site-title { 
+            font-size: 32px;
+            font-weight: 800;
+            text-align: left; 
+            color: var(--text-main); 
+            margin: 40px 0 15px 0;
+            letter-spacing: -1px;
+        }
+        .site-subtitle {
+            color: var(--text-muted);
+            font-size: 16px;
+            margin-bottom: 40px;
+        }
+        /* 3. 文章卡片美化 */
+        .post { 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: 16px; 
+            box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03); 
+            margin-bottom: 35px; 
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .post:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 22px rgba(0, 0, 0, 0.05);
+        }
+        .post h2 { 
+            margin-top: 0; 
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-main); 
+            margin-bottom: 15px;
+        }
+        /* 4. 封面图片自适应 */
+        .post-cover { 
+            width: 100%; 
+            max-height: 400px;
+            object-fit: cover; 
+            border-radius: 10px; 
+            margin: 18px 0; 
+            display: block; 
+        }
+        .post p { 
+            color: var(--text-muted); 
+            font-size: 15.5px; 
+            white-space: pre-wrap; 
+            margin: 0;
+        }
+        /* 5. 页脚 */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #b8b8bc;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 顶端导航：只保留最纯净的外部展示链接 -->
+    <nav>
+        <div class="logo">宝哥的空间</div>
+        <div class="links">
+            <a href="#">首页</a>
+        </div>
+    </nav>
+
+    <h1 class="site-title">👋 欢迎来到我的空间</h1>
+    <div class="site-subtitle">在这里，记录生活、工作和有趣的思想。</div>
+    
+    <!-- 文章列表容器 -->
+    <div id="posts-container">正在从云端加载文章列表...</div>
+
+    <!-- 页脚版权 -->
+    <footer>
+        <p>© 2026 宝哥的个人空间. All Rights Reserved.</p>
+    </footer>
+
+    <script>
+        const projectId = 'm81b29ep';
+        const dataset = 'production';
+
+        const groqQuery = `*[_type == "post"] | order(_createdAt desc) {
+            title,
+            "coverUrl": mainImage.asset->url,
+            body
+        }`;
+        const apiUrl = `https://${projectId}.api.sanity.io/v2024-03-01/data/query/${dataset}?query=${encodeURIComponent(groqQuery)}`;
+
+        async function loadPosts() {
+            try {
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error('网络请求失败');
+
+                const data = await response.json();
+                const posts = data.result; 
+                
+                const container = document.getElementById('posts-container');
+                container.innerHTML = '';
+
+                if (!posts || posts.length === 0) {
+                    container.innerHTML = '<p style="text-align:center; color:#999; padding:40px 0;">暂无动态，主人的新内容正在路上了...</p>';
+                    return;
+                }
+
+                posts.forEach(post => {
+                    let textContent = '';
+                    if (post.body && Array.isArray(post.body)) {
+                        textContent = post.body
+                            .map(block => block.children ? block.children.map(c => c.text).join('') : '')
+                            .filter(text => text !== '')
+                            .join('\n\n');
+                    }
+
+                    container.innerHTML += `
+                        <div class="post">
+                            <h2>${post.title}</h2>
+                            ${post.coverUrl ? `<img class="post-cover" src="${post.coverUrl}" alt="封面图">` : ''}
+                            <p>${textContent || '无文字内容'}</p>
+                        </div>
+                    `;
+                });
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById('posts-container').innerText = '动态加载失败，请稍后刷新重试。';
+            }
+        }
+
+        loadPosts();
+    </script>
+</body>
+</html>
